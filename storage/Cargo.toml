@@ -1,0 +1,8 @@
+[package]
+name = "storage"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+strum = { version = "0.26.3", default-features = false, features = ["derive"] }
+embedded-storage = "0.3.1"
