@@ -30,8 +30,8 @@ pub enum StorageContents {
     DisplayCycleCountMetadata,
     /// Stores the last frame of the eink display
     Frame,
-    /// Storage wifi information
-    Wifi,
+    /// Storage wifi credential information
+    WifiCredentials,
     /// Reserved Phy init
     /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
     ReservedPhyInit,
@@ -83,7 +83,7 @@ impl AddrSpace for StorageContents {
             StorageContents::FirstFrameMetadata => (0x9000, 0x9000),
             StorageContents::DisplayCycleCountMetadata => (0x9001, 0x9001),
             StorageContents::Frame => (0x9002, 0xca99), // Only allocated enough space to store 1 400x300 frames
-            StorageContents::Wifi => (0xca9a, 0xcb99),  // Allocated enough for 256 bytes
+            StorageContents::WifiCredentials => (0xca9a, 0xcb99), // Allocated enough for 256 bytes
             StorageContents::ReservedPhyInit => (0xf000, 0xffff),
             StorageContents::ReservedFactory => (0x10000, 0x110000),
             StorageContents::ReservedEnd => (0x3ffffe, 0x3fffff),
@@ -99,7 +99,7 @@ impl AddrSpace for StorageContents {
             StorageContents::FirstFrameMetadata => false,
             StorageContents::DisplayCycleCountMetadata => false,
             StorageContents::Frame => false,
-            StorageContents::Wifi => false,
+            StorageContents::WifiCredentials => false,
         }
     }
 }
