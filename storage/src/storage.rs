@@ -32,6 +32,8 @@ pub enum StorageContents {
     Frame,
     /// Storage wifi credential information
     WifiCredentials,
+    /// Storage for textual display information
+    DisplayText,
     /// Reserved Phy init
     /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
     ReservedPhyInit,
@@ -79,27 +81,29 @@ impl AddrSpace for StorageContents {
     /// Assuming a total size of ~4MBs we'll say that the last address is 0x3fffff
     fn get_address(self) -> (u32, u32) {
         match self {
-            StorageContents::ReservedStart => (0x0000, 0x8fff),
-            StorageContents::FirstFrameMetadata => (0x9000, 0x9000),
-            StorageContents::DisplayCycleCountMetadata => (0x9001, 0x9001),
-            StorageContents::Frame => (0x9002, 0xca99), // Only allocated enough space to store 1 400x300 frames
-            StorageContents::WifiCredentials => (0xca9a, 0xcb99), // Allocated enough for 256 bytes
-            StorageContents::ReservedPhyInit => (0xf000, 0xffff),
-            StorageContents::ReservedFactory => (0x10000, 0x110000),
-            StorageContents::ReservedEnd => (0x3ffffe, 0x3fffff),
+            Self::ReservedStart => (0x0000, 0x8fff),
+            Self::FirstFrameMetadata => (0x9000, 0x9000),
+            Self::DisplayCycleCountMetadata => (0x9001, 0x9001),
+            Self::Frame => (0x9002, 0xca99), // Only allocated enough space to store 1 400x300 frames
+            Self::WifiCredentials => (0xca9a, 0xcb99), // Allocated enough for 256 bytes
+            Self::DisplayText => (0xcb9a, 0xcc99), // Allocated enough for 256 bytes
+            Self::ReservedPhyInit => (0xf000, 0xffff),
+            Self::ReservedFactory => (0x10000, 0x110000),
+            Self::ReservedEnd => (0x3ffffe, 0x3fffff),
         }
     }
 
     fn is_address_reserved(self) -> bool {
         match self {
-            StorageContents::ReservedStart => true,
-            StorageContents::ReservedPhyInit => true,
-            StorageContents::ReservedFactory => true,
-            StorageContents::ReservedEnd => true,
-            StorageContents::FirstFrameMetadata => false,
-            StorageContents::DisplayCycleCountMetadata => false,
-            StorageContents::Frame => false,
-            StorageContents::WifiCredentials => false,
+            Self::ReservedStart => true,
+            Self::ReservedPhyInit => true,
+            Self::ReservedFactory => true,
+            Self::ReservedEnd => true,
+            Self::FirstFrameMetadata => false,
+            Self::DisplayCycleCountMetadata => false,
+            Self::Frame => false,
+            Self::WifiCredentials => false,
+            Self::DisplayText => false,
         }
     }
 }
