@@ -34,6 +34,8 @@ pub enum StorageContents {
     WifiCredentials,
     /// Storage for textual display information
     DisplayText,
+    /// Storage for URL information
+    DisplayURL,
     /// Reserved Phy init
     /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
     ReservedPhyInit,
@@ -87,6 +89,7 @@ impl AddrSpace for StorageContents {
             Self::Frame => (0x9002, 0xca99), // Only allocated enough space to store 1 400x300 frames
             Self::WifiCredentials => (0xca9a, 0xcb99), // Allocated enough for 256 bytes
             Self::DisplayText => (0xcb9a, 0xcc99), // Allocated enough for 256 bytes
+            Self::DisplayURL => (0xcc9a, 0xcd99), // Allocated enough for 256 bytes
             Self::ReservedPhyInit => (0xf000, 0xffff),
             Self::ReservedFactory => (0x10000, 0x110000),
             Self::ReservedEnd => (0x3ffffe, 0x3fffff),
@@ -104,6 +107,7 @@ impl AddrSpace for StorageContents {
             Self::Frame => false,
             Self::WifiCredentials => false,
             Self::DisplayText => false,
+            Self::DisplayURL => false,
         }
     }
 }
