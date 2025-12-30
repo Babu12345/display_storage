@@ -36,6 +36,8 @@ pub enum StorageContents {
     DisplayText,
     /// Storage for URL information
     DisplayURL,
+    /// Storage for saved MQTT topics (up to 24 topics)
+    MqttTopics,
     /// Reserved Phy init
     /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
     ReservedPhyInit,
@@ -90,6 +92,7 @@ impl AddrSpace for StorageContents {
             Self::WifiCredentials => (0xca9a, 0xcb99), // Allocated enough for 256 bytes
             Self::DisplayText => (0xcb9a, 0xcc99), // Allocated enough for 256 bytes
             Self::DisplayURL => (0xcc9a, 0xcd99), // Allocated enough for 256 bytes
+            Self::MqttTopics => (0xcd9a, 0xd999), // Allocated 3072 bytes for ~24 topics (128 bytes each)
             Self::ReservedPhyInit => (0xf000, 0xffff),
             Self::ReservedFactory => (0x10000, 0x110000),
             Self::ReservedEnd => (0x3ffffe, 0x3fffff),
@@ -108,6 +111,7 @@ impl AddrSpace for StorageContents {
             Self::WifiCredentials => false,
             Self::DisplayText => false,
             Self::DisplayURL => false,
+            Self::MqttTopics => false,
         }
     }
 }
