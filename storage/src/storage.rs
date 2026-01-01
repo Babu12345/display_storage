@@ -20,9 +20,12 @@ where
 /// Reserved and used content sections for storage
 #[derive(Clone, Copy, PartialEq, Debug, EnumIter)]
 pub enum StorageContents {
-    /// First 0x9000 addresses are reserved for safety (bootloader area)
-    /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
+    /// Reserved for bootloader, partition table, NVS (0x0000-0x0ffff)
+    /// Covers both dev mode (smaller bootloader) and secure boot (larger bootloader)
     ReservedStart,
+    /// Reserved for factory app partition (0x10000-0x19ffff, ~1.5MB)
+    /// Dev mode: app at 0x10000, Secure boot: app at 0x20000, but both end at 0x1A0000
+    ReservedFactory,
     /// Stores whether this was the first frame. Increase size to make
     /// it more likely that there is no collisons and proper detection occurs
     FirstFrameMetadata,
@@ -42,15 +45,8 @@ pub enum StorageContents {
     MaxCyclesBeforeFullRefresh,
     /// Minimum update interval between display refreshes
     MinUpdateInterval,
-    /// Reserved Phy init
-    /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
+    /// Reserved Phy init (4KB)
     ReservedPhyInit,
-    /// Reserved partition table (0x10000-0x10fff for secure boot with larger bootloader)
-    /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
-    ReservedPartitionTable,
-    /// Reserved Factory app partition (starts at 0x20000 for secure boot configuration)
-    /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
-    ReservedFactory,
     /// Last few addresses are reserved for safety
     ReservedEnd,
 }
@@ -91,15 +87,22 @@ impl AddrSpace for StorageContents {
     /// For every bit of address space 1 Byte is stored
     /// Assuming a total size of ~4MBs we'll say that the last address is 0x3fffff
     fn get_address(self) -> (u32, u32) {
-        // Flash layout for Secure Boot V2 + Flash Encryption:
-        // 0x00000 - 0x0ffff: Bootloader (secure boot needs ~48KB, reserving 64KB)
-        // 0x10000 - 0x1ffff: Partition table + NVS/OTA/PHY data
-        // 0x20000 - 0x1A0000: App (factory partition, 1.5MB)
-        // 0x1A0000+: Available for user data storage
+        // Flash layout supports both development and secure boot modes:
+        //
+        // Development (espflash default bootloader):
+        //   0x00000 - 0x08fff: Bootloader (~32KB)
+        //   0x09000 - 0x0efff: NVS (24KB)
+        //   0x10000 - 0x19ffff: App (factory partition, ~1.5MB)
+        //
+        // Secure Boot V2 + Flash Encryption:
+        //   0x00000 - 0x0ffff: Bootloader (secure boot needs ~48KB, reserving 64KB)
+        //   0x10000 - 0x1ffff: Partition table + NVS/OTA/PHY data
+        //   0x20000 - 0x19ffff: App (factory partition, 1.5MB)
+        //
+        // User data starts at 0x1A0000 (works for both modes)
         match self {
-            Self::ReservedStart => (0x0000, 0x0ffff), // Bootloader (secure boot needs up to 0xc000, reserve 64KB)
-            Self::ReservedPartitionTable => (0x10000, 0x1ffff), // Partition table + data partitions
-            Self::ReservedFactory => (0x20000, 0x19ffff), // App starts at 0x20000, 1.5MB size
+            Self::ReservedStart => (0x0000, 0x0ffff), // Bootloader + partition table + NVS
+            Self::ReservedFactory => (0x10000, 0x19ffff), // App region (covers both modes)
             // User data starts after the app partition at 0x1A0000
             Self::FirstFrameMetadata => (0x1a0000, 0x1a0000),
             Self::DisplayCycleCountMetadata => (0x1a0001, 0x1a0001),
@@ -118,9 +121,8 @@ impl AddrSpace for StorageContents {
     fn is_address_reserved(self) -> bool {
         match self {
             Self::ReservedStart => true,
-            Self::ReservedPhyInit => true,
-            Self::ReservedPartitionTable => true,
             Self::ReservedFactory => true,
+            Self::ReservedPhyInit => true,
             Self::ReservedEnd => true,
             Self::FirstFrameMetadata => false,
             Self::DisplayCycleCountMetadata => false,
