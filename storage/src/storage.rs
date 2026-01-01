@@ -20,7 +20,7 @@ where
 /// Reserved and used content sections for storage
 #[derive(Clone, Copy, PartialEq, Debug, EnumIter)]
 pub enum StorageContents {
-    /// First 0x9000 addresses are reserved for safety
+    /// First 0x9000 addresses are reserved for safety (bootloader area)
     /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
     ReservedStart,
     /// Stores whether this was the first frame. Increase size to make
@@ -45,7 +45,10 @@ pub enum StorageContents {
     /// Reserved Phy init
     /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
     ReservedPhyInit,
-    /// Reserved Factory
+    /// Reserved partition table (0x10000-0x10fff for secure boot with larger bootloader)
+    /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
+    ReservedPartitionTable,
+    /// Reserved Factory app partition (starts at 0x20000 for secure boot configuration)
     /// See https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html#partition-tables for more info
     ReservedFactory,
     /// Last few addresses are reserved for safety
@@ -88,19 +91,26 @@ impl AddrSpace for StorageContents {
     /// For every bit of address space 1 Byte is stored
     /// Assuming a total size of ~4MBs we'll say that the last address is 0x3fffff
     fn get_address(self) -> (u32, u32) {
+        // Flash layout for Secure Boot V2 + Flash Encryption:
+        // 0x00000 - 0x0ffff: Bootloader (secure boot needs ~48KB, reserving 64KB)
+        // 0x10000 - 0x1ffff: Partition table (moved for larger bootloader)
+        // 0x20000 - 0x120000: App (factory partition)
+        // 0x120000+: Available for user data storage
         match self {
-            Self::ReservedStart => (0x0000, 0x8fff),
-            Self::FirstFrameMetadata => (0x9000, 0x9000),
-            Self::DisplayCycleCountMetadata => (0x9001, 0x9001),
-            Self::Frame => (0x9002, 0xca99), // Only allocated enough space to store 1 400x300 frames
-            Self::WifiCredentials => (0xca9a, 0xcb99), // Allocated enough for 256 bytes
-            Self::DisplayText => (0xcb9a, 0xcc99), // Allocated enough for 256 bytes
-            Self::DisplayURL => (0xcc9a, 0xcd99), // Allocated enough for 256 bytes
-            Self::MqttTopics => (0xcd9a, 0xd999), // Allocated 3072 bytes for ~24 topics (128 bytes each)
-            Self::MaxCyclesBeforeFullRefresh => (0xd99a, 0xd99b), // 2 bytes for u16
-            Self::MinUpdateInterval => (0xd99c, 0xd99f), // 4 bytes for u32
-            Self::ReservedPhyInit => (0xf000, 0xffff),
-            Self::ReservedFactory => (0x10000, 0x110000),
+            Self::ReservedStart => (0x0000, 0x0ffff), // Bootloader (secure boot needs up to 0xc000, reserve 64KB)
+            Self::ReservedPartitionTable => (0x10000, 0x1ffff), // Partition table at 0x10000 for secure boot
+            Self::ReservedFactory => (0x20000, 0x120000), // App starts at 0x20000 for secure boot (~1MB)
+            // User data starts after the app partition at 0x120001
+            Self::FirstFrameMetadata => (0x120001, 0x120001),
+            Self::DisplayCycleCountMetadata => (0x120002, 0x120002),
+            Self::Frame => (0x120003, 0x13c59a), // Only allocated enough space to store 1 400x300 frames (~115KB)
+            Self::WifiCredentials => (0x13c59b, 0x13c69a), // Allocated enough for 256 bytes
+            Self::DisplayText => (0x13c69b, 0x13c79a), // Allocated enough for 256 bytes
+            Self::DisplayURL => (0x13c79b, 0x13c89a), // Allocated enough for 256 bytes
+            Self::MqttTopics => (0x13c89b, 0x13d49a), // Allocated 3072 bytes for ~24 topics (128 bytes each)
+            Self::MaxCyclesBeforeFullRefresh => (0x13d49b, 0x13d49c), // 2 bytes for u16
+            Self::MinUpdateInterval => (0x13d49d, 0x13d4a0), // 4 bytes for u32
+            Self::ReservedPhyInit => (0x13d4a1, 0x13e4a0), // 4KB reserved
             Self::ReservedEnd => (0x3ffffe, 0x3fffff),
         }
     }
@@ -109,6 +119,7 @@ impl AddrSpace for StorageContents {
         match self {
             Self::ReservedStart => true,
             Self::ReservedPhyInit => true,
+            Self::ReservedPartitionTable => true,
             Self::ReservedFactory => true,
             Self::ReservedEnd => true,
             Self::FirstFrameMetadata => false,
