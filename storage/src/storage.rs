@@ -93,24 +93,24 @@ impl AddrSpace for StorageContents {
     fn get_address(self) -> (u32, u32) {
         // Flash layout for Secure Boot V2 + Flash Encryption:
         // 0x00000 - 0x0ffff: Bootloader (secure boot needs ~48KB, reserving 64KB)
-        // 0x10000 - 0x1ffff: Partition table (moved for larger bootloader)
-        // 0x20000 - 0x120000: App (factory partition)
-        // 0x120000+: Available for user data storage
+        // 0x10000 - 0x1ffff: Partition table + NVS/OTA/PHY data
+        // 0x20000 - 0x1A0000: App (factory partition, 1.5MB)
+        // 0x1A0000+: Available for user data storage
         match self {
             Self::ReservedStart => (0x0000, 0x0ffff), // Bootloader (secure boot needs up to 0xc000, reserve 64KB)
-            Self::ReservedPartitionTable => (0x10000, 0x1ffff), // Partition table at 0x10000 for secure boot
-            Self::ReservedFactory => (0x20000, 0x120000), // App starts at 0x20000 for secure boot (~1MB)
-            // User data starts after the app partition at 0x120001
-            Self::FirstFrameMetadata => (0x120001, 0x120001),
-            Self::DisplayCycleCountMetadata => (0x120002, 0x120002),
-            Self::Frame => (0x120003, 0x13c59a), // Only allocated enough space to store 1 400x300 frames (~115KB)
-            Self::WifiCredentials => (0x13c59b, 0x13c69a), // Allocated enough for 256 bytes
-            Self::DisplayText => (0x13c69b, 0x13c79a), // Allocated enough for 256 bytes
-            Self::DisplayURL => (0x13c79b, 0x13c89a), // Allocated enough for 256 bytes
-            Self::MqttTopics => (0x13c89b, 0x13d49a), // Allocated 3072 bytes for ~24 topics (128 bytes each)
-            Self::MaxCyclesBeforeFullRefresh => (0x13d49b, 0x13d49c), // 2 bytes for u16
-            Self::MinUpdateInterval => (0x13d49d, 0x13d4a0), // 4 bytes for u32
-            Self::ReservedPhyInit => (0x13d4a1, 0x13e4a0), // 4KB reserved
+            Self::ReservedPartitionTable => (0x10000, 0x1ffff), // Partition table + data partitions
+            Self::ReservedFactory => (0x20000, 0x19ffff), // App starts at 0x20000, 1.5MB size
+            // User data starts after the app partition at 0x1A0000
+            Self::FirstFrameMetadata => (0x1a0000, 0x1a0000),
+            Self::DisplayCycleCountMetadata => (0x1a0001, 0x1a0001),
+            Self::Frame => (0x1a0002, 0x1bc599), // Only allocated enough space to store 1 400x300 frames (~115KB)
+            Self::WifiCredentials => (0x1bc59a, 0x1bc699), // Allocated enough for 256 bytes
+            Self::DisplayText => (0x1bc69a, 0x1bc799), // Allocated enough for 256 bytes
+            Self::DisplayURL => (0x1bc79a, 0x1bc899), // Allocated enough for 256 bytes
+            Self::MqttTopics => (0x1bc89a, 0x1bd499), // Allocated 3072 bytes for ~24 topics (128 bytes each)
+            Self::MaxCyclesBeforeFullRefresh => (0x1bd49a, 0x1bd49b), // 2 bytes for u16
+            Self::MinUpdateInterval => (0x1bd49c, 0x1bd49f), // 4 bytes for u32
+            Self::ReservedPhyInit => (0x1bd4a0, 0x1be49f), // 4KB reserved
             Self::ReservedEnd => (0x3ffffe, 0x3fffff),
         }
     }
