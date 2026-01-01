@@ -85,36 +85,36 @@ impl AddrSpace for StorageContents {
     /// DO NOT INTERSECT ANY OF THESE ADDRESSES OR SUBSEQUENT VALIDATIONS WILL PANIC
     ///
     /// For every bit of address space 1 Byte is stored
-    /// Assuming a total size of ~4MBs we'll say that the last address is 0x3fffff
+    /// Assuming a total size of 8MB, the last address is 0x7fffff
     fn get_address(self) -> (u32, u32) {
         // Flash layout supports both development and secure boot modes:
         //
         // Development (espflash default bootloader):
         //   0x00000 - 0x08fff: Bootloader (~32KB)
         //   0x09000 - 0x0efff: NVS (24KB)
-        //   0x10000 - 0x19ffff: App (factory partition, ~1.5MB)
+        //   0x10000 - 0x30ffff: App (factory partition, 3MB)
         //
         // Secure Boot V2 + Flash Encryption:
         //   0x00000 - 0x0ffff: Bootloader (secure boot needs ~48KB, reserving 64KB)
         //   0x10000 - 0x1ffff: Partition table + NVS/OTA/PHY data
-        //   0x20000 - 0x19ffff: App (factory partition, 1.5MB)
+        //   0x20000 - 0x30ffff: App (factory partition, ~3MB)
         //
-        // User data starts at 0x1A0000 (works for both modes)
+        // User data starts at 0x310000 (works for both modes)
         match self {
             Self::ReservedStart => (0x0000, 0x0ffff), // Bootloader + partition table + NVS
-            Self::ReservedFactory => (0x10000, 0x19ffff), // App region (covers both modes)
-            // User data starts after the app partition at 0x1A0000
-            Self::FirstFrameMetadata => (0x1a0000, 0x1a0000),
-            Self::DisplayCycleCountMetadata => (0x1a0001, 0x1a0001),
-            Self::Frame => (0x1a0002, 0x1bc599), // Only allocated enough space to store 1 400x300 frames (~115KB)
-            Self::WifiCredentials => (0x1bc59a, 0x1bc699), // Allocated enough for 256 bytes
-            Self::DisplayText => (0x1bc69a, 0x1bc799), // Allocated enough for 256 bytes
-            Self::DisplayURL => (0x1bc79a, 0x1bc899), // Allocated enough for 256 bytes
-            Self::MqttTopics => (0x1bc89a, 0x1bd499), // Allocated 3072 bytes for ~24 topics (128 bytes each)
-            Self::MaxCyclesBeforeFullRefresh => (0x1bd49a, 0x1bd49b), // 2 bytes for u16
-            Self::MinUpdateInterval => (0x1bd49c, 0x1bd49f), // 4 bytes for u32
-            Self::ReservedPhyInit => (0x1bd4a0, 0x1be49f), // 4KB reserved
-            Self::ReservedEnd => (0x3ffffe, 0x3fffff),
+            Self::ReservedFactory => (0x10000, 0x30ffff), // App region (3MB)
+            // User data starts after the app partition at 0x310000
+            Self::FirstFrameMetadata => (0x310000, 0x310000),
+            Self::DisplayCycleCountMetadata => (0x310001, 0x310001),
+            Self::Frame => (0x310002, 0x32c599), // Only allocated enough space to store 1 400x300 frames (~115KB)
+            Self::WifiCredentials => (0x32c59a, 0x32c699), // Allocated enough for 256 bytes
+            Self::DisplayText => (0x32c69a, 0x32c799), // Allocated enough for 256 bytes
+            Self::DisplayURL => (0x32c79a, 0x32c899), // Allocated enough for 256 bytes
+            Self::MqttTopics => (0x32c89a, 0x32d499), // Allocated 3072 bytes for ~24 topics (128 bytes each)
+            Self::MaxCyclesBeforeFullRefresh => (0x32d49a, 0x32d49b), // 2 bytes for u16
+            Self::MinUpdateInterval => (0x32d49c, 0x32d49f), // 4 bytes for u32
+            Self::ReservedPhyInit => (0x32d4a0, 0x32e49f), // 4KB reserved
+            Self::ReservedEnd => (0x7ffffe, 0x7fffff), // 8MB flash ends at 0x800000
         }
     }
 
