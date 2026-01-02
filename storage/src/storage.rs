@@ -45,6 +45,8 @@ pub enum StorageContents {
     MaxCyclesBeforeFullRefresh,
     /// Minimum update interval between display refreshes
     MinUpdateInterval,
+    /// Last successful update timestamp (seconds since boot, persists across reconnects)
+    LastUpdateTimestamp,
     /// Reserved Phy init (4KB)
     ReservedPhyInit,
     /// Last few addresses are reserved for safety
@@ -113,7 +115,8 @@ impl AddrSpace for StorageContents {
             Self::MqttTopics => (0x32c89a, 0x32d499), // Allocated 3072 bytes for ~24 topics (128 bytes each)
             Self::MaxCyclesBeforeFullRefresh => (0x32d49a, 0x32d49b), // 2 bytes for u16
             Self::MinUpdateInterval => (0x32d49c, 0x32d49f), // 4 bytes for u32
-            Self::ReservedPhyInit => (0x32d4a0, 0x32e49f), // 4KB reserved
+            Self::LastUpdateTimestamp => (0x32d4a0, 0x32d4a7), // 8 bytes for u64 timestamp
+            Self::ReservedPhyInit => (0x32d4a8, 0x32e4a7), // 4KB reserved
             Self::ReservedEnd => (0x7ffffe, 0x7fffff), // 8MB flash ends at 0x800000
         }
     }
@@ -133,6 +136,7 @@ impl AddrSpace for StorageContents {
             Self::MqttTopics => false,
             Self::MaxCyclesBeforeFullRefresh => false,
             Self::MinUpdateInterval => false,
+            Self::LastUpdateTimestamp => false,
         }
     }
 }
