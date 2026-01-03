@@ -3,9 +3,10 @@
 //! allow for more safety and ease of use when storing a lot
 //! of data that should be organized well.
 use crate::error::{self, Result};
-use core::{fmt::Debug, usize};
+use core::usize;
 use embedded_storage::Storage;
 
+use storage_macros::ValidateAddrSpace;
 use strum::{EnumIter, IntoEnumIterator};
 
 /// Allows access to the peristent storage of the device
@@ -18,131 +19,56 @@ where
 }
 
 /// Reserved and used content sections for storage
-#[derive(Clone, Copy, PartialEq, Debug, EnumIter)]
+#[derive(Clone, Copy, PartialEq, Debug, EnumIter, ValidateAddrSpace)]
 pub enum StorageContents {
     /// Reserved for bootloader, partition table, NVS (0x0000-0x0ffff)
     /// Covers both dev mode (smaller bootloader) and secure boot (larger bootloader)
+    #[addr_space(0x0000, 0x0ffff, reserved)]
     ReservedStart,
-    /// Reserved for factory app partition (0x10000-0x19ffff, ~1.5MB)
-    /// Dev mode: app at 0x10000, Secure boot: app at 0x20000, but both end at 0x1A0000
+    /// Reserved for factory app partition (0x10000-0x30ffff, ~3MB)
+    /// Dev mode: app at 0x10000, Secure boot: app at 0x20000, but both end at 0x310000
+    #[addr_space(0x10000, 0x30ffff, reserved)]
     ReservedFactory,
     /// Stores whether this was the first frame. Increase size to make
     /// it more likely that there is no collisons and proper detection occurs
+    #[addr_space(0x310000, 0x310000)]
     FirstFrameMetadata,
     /// Stores how many cycles have happened since the last full Normal refresh
+    #[addr_space(0x310001, 0x310001)]
     DisplayCycleCountMetadata,
     /// Stores the last frame of the eink display
+    #[addr_space(0x310002, 0x32c599)]
     Frame,
     /// Storage wifi credential information
+    #[addr_space(0x32c59a, 0x32c699)]
     WifiCredentials,
     /// Storage for textual display information
+    #[addr_space(0x32c69a, 0x32c799)]
     DisplayText,
     /// Storage for URL information
+    #[addr_space(0x32c79a, 0x32c899)]
     DisplayURL,
     /// Storage for saved MQTT topics (up to 24 topics)
+    #[addr_space(0x32c89a, 0x32d499)]
     MqttTopics,
     /// Max cycles before display full refresh
+    #[addr_space(0x32d49a, 0x32d49b)]
     MaxCyclesBeforeFullRefresh,
     /// Minimum update interval between display refreshes
+    #[addr_space(0x32d49c, 0x32d49f)]
     MinUpdateInterval,
     /// Last successful update timestamp (seconds since boot, persists across reconnects)
+    #[addr_space(0x32d4a0, 0x32d4a7)]
     LastUpdateTimestamp,
     /// WiFi error flag - set when WiFi fails, cleared after displaying error on next boot
+    #[addr_space(0x32d4a8, 0x32d4a8)]
     WifiErrorFlag,
     /// Reserved Phy init (4KB)
+    #[addr_space(0x32d4a9, 0x32e4a8, reserved)]
     ReservedPhyInit,
     /// Last few addresses are reserved for safety
+    #[addr_space(0x7ffffe, 0x7fffff, reserved)]
     ReservedEnd,
-}
-
-trait AddrSpace: IntoEnumIterator + Debug + PartialEq + Copy {
-    fn get_address(self) -> (u32, u32);
-    fn is_address_reserved(self) -> bool;
-    #[allow(dead_code)]
-    fn validate() {
-        for item_i in Self::iter() {
-            assert!(
-                item_i.get_address().0 <= item_i.get_address().1,
-                "Low memory address of {:?} must be less than or equal to higher address",
-                item_i
-            );
-            for item_j in Self::iter() {
-                if item_i == item_j {
-                    continue;
-                }
-                assert!(
-                    !(item_i.get_address().0 >= item_j.get_address().0
-                        && item_i.get_address().0 <= item_j.get_address().1)
-                        && !(item_i.get_address().1 >= item_j.get_address().0
-                            && item_i.get_address().1 <= item_j.get_address().1),
-                    "Memory addresses cannot cross. Problematic addresses: {:?} and {:?}",
-                    item_i,
-                    item_j
-                );
-            }
-        }
-    }
-}
-
-impl AddrSpace for StorageContents {
-    /// Maps the content type to the starting address (inclusive) and end address (inclusive)
-    /// DO NOT INTERSECT ANY OF THESE ADDRESSES OR SUBSEQUENT VALIDATIONS WILL PANIC
-    ///
-    /// For every bit of address space 1 Byte is stored
-    /// Assuming a total size of 8MB, the last address is 0x7fffff
-    fn get_address(self) -> (u32, u32) {
-        // Flash layout supports both development and secure boot modes:
-        //
-        // Development (espflash default bootloader):
-        //   0x00000 - 0x08fff: Bootloader (~32KB)
-        //   0x09000 - 0x0efff: NVS (24KB)
-        //   0x10000 - 0x30ffff: App (factory partition, 3MB)
-        //
-        // Secure Boot V2 + Flash Encryption:
-        //   0x00000 - 0x0ffff: Bootloader (secure boot needs ~48KB, reserving 64KB)
-        //   0x10000 - 0x1ffff: Partition table + NVS/OTA/PHY data
-        //   0x20000 - 0x30ffff: App (factory partition, ~3MB)
-        //
-        // User data starts at 0x310000 (works for both modes)
-        match self {
-            Self::ReservedStart => (0x0000, 0x0ffff), // Bootloader + partition table + NVS
-            Self::ReservedFactory => (0x10000, 0x30ffff), // App region (3MB)
-            // User data starts after the app partition at 0x310000
-            Self::FirstFrameMetadata => (0x310000, 0x310000),
-            Self::DisplayCycleCountMetadata => (0x310001, 0x310001),
-            Self::Frame => (0x310002, 0x32c599), // Only allocated enough space to store 1 400x300 frames (~115KB)
-            Self::WifiCredentials => (0x32c59a, 0x32c699), // Allocated enough for 256 bytes
-            Self::DisplayText => (0x32c69a, 0x32c799), // Allocated enough for 256 bytes
-            Self::DisplayURL => (0x32c79a, 0x32c899), // Allocated enough for 256 bytes
-            Self::MqttTopics => (0x32c89a, 0x32d499), // Allocated 3072 bytes for ~24 topics (128 bytes each)
-            Self::MaxCyclesBeforeFullRefresh => (0x32d49a, 0x32d49b), // 2 bytes for u16
-            Self::MinUpdateInterval => (0x32d49c, 0x32d49f), // 4 bytes for u32
-            Self::LastUpdateTimestamp => (0x32d4a0, 0x32d4a7), // 8 bytes for u64 timestamp
-            Self::WifiErrorFlag => (0x32d4a8, 0x32d4a8), // 1 byte for WiFi error flag
-            Self::ReservedPhyInit => (0x32d4a9, 0x32e4a8), // 4KB reserved
-            Self::ReservedEnd => (0x7ffffe, 0x7fffff), // 8MB flash ends at 0x800000
-        }
-    }
-
-    fn is_address_reserved(self) -> bool {
-        match self {
-            Self::ReservedStart => true,
-            Self::ReservedFactory => true,
-            Self::ReservedPhyInit => true,
-            Self::ReservedEnd => true,
-            Self::FirstFrameMetadata => false,
-            Self::DisplayCycleCountMetadata => false,
-            Self::Frame => false,
-            Self::WifiCredentials => false,
-            Self::DisplayText => false,
-            Self::DisplayURL => false,
-            Self::MqttTopics => false,
-            Self::MaxCyclesBeforeFullRefresh => false,
-            Self::MinUpdateInterval => false,
-            Self::LastUpdateTimestamp => false,
-            Self::WifiErrorFlag => false,
-        }
-    }
 }
 
 impl<'storage, STORAGE> PersistentStorage<'storage, STORAGE>
@@ -223,15 +149,5 @@ where
             .read(content.get_address().0, &mut self.internal_buffer)
             .map_err(|_| error::Error::FlashReadError)?;
         Ok(self.internal_buffer)
-    }
-}
-
-#[cfg(test)]
-mod storage_tests {
-    use super::*;
-
-    #[test]
-    fn verify_valid_storage() {
-        StorageContents::validate();
     }
 }

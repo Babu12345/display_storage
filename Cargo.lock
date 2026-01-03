@@ -43,7 +43,17 @@ name = "storage"
 version = "0.1.0"
 dependencies = [
  "embedded-storage",
+ "storage-macros",
  "strum",
+]
+
+[[package]]
+name = "storage-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
