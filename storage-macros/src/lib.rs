@@ -16,7 +16,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Expr, Ident, Lit};
 /// # Usage
 ///
 /// ```ignore
-/// #[derive(ValidateAddrSpace)]
+/// #[derive(AddrSpace)]
 /// pub enum StorageContents {
 ///     #[addr_space(0x0000, 0x8fff, reserved)]
 ///     ReservedStart,
@@ -31,13 +31,13 @@ use syn::{parse_macro_input, Data, DeriveInput, Expr, Ident, Lit};
 /// //     pub fn is_address_reserved(&self) -> bool { ... }
 /// // }
 /// ```
-#[proc_macro_derive(ValidateAddrSpace, attributes(addr_space))]
-pub fn validate_addr_space(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(AddrSpace, attributes(addr_space))]
+pub fn addr_space_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let enum_name = &input.ident;
 
     let Data::Enum(data_enum) = &input.data else {
-        return syn::Error::new(Span::call_site(), "ValidateAddrSpace can only be applied to enums")
+        return syn::Error::new(Span::call_site(), "AddrSpace can only be applied to enums")
             .to_compile_error()
             .into();
     };

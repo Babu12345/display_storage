@@ -6,7 +6,7 @@ use crate::error::{self, Result};
 use core::usize;
 use embedded_storage::Storage;
 
-use storage_macros::ValidateAddrSpace;
+use storage_macros::AddrSpace;
 use strum::{EnumIter, IntoEnumIterator};
 
 /// Allows access to the peristent storage of the device
@@ -18,8 +18,22 @@ where
     internal_buffer: &'a mut [u8],
 }
 
-/// Reserved and used content sections for storage
-#[derive(Clone, Copy, PartialEq, Debug, EnumIter, ValidateAddrSpace)]
+/// Reserved and used content sections for storage.
+///
+/// Flash layout supports both development and secure boot modes:
+///
+/// Development (espflash default bootloader):
+/// - 0x00000 - 0x08fff: Bootloader (~32KB)
+/// - 0x09000 - 0x0efff: NVS (24KB)
+/// - 0x10000 - 0x30ffff: App (factory partition, 3MB)
+///
+/// Secure Boot V2 + Flash Encryption:
+/// - 0x00000 - 0x0ffff: Bootloader (secure boot needs ~48KB, reserving 64KB)
+/// - 0x10000 - 0x1ffff: Partition table + NVS/OTA/PHY data
+/// - 0x20000 - 0x30ffff: App (factory partition, ~3MB)
+///
+/// User data starts at 0x310000 (works for both modes)
+#[derive(Clone, Copy, PartialEq, Debug, EnumIter, AddrSpace)]
 pub enum StorageContents {
     /// Reserved for bootloader, partition table, NVS (0x0000-0x0ffff)
     /// Covers both dev mode (smaller bootloader) and secure boot (larger bootloader)
