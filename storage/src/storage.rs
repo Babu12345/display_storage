@@ -165,37 +165,4 @@ where
             .map_err(|_| error::Error::FlashReadError)?;
         Ok(self.internal_buffer)
     }
-
-    /// Checks if this is the first time registration (user has never registered before).
-    ///
-    /// Returns `true` if the user has never registered (storage is uninitialized/0xFF),
-    /// `false` if the user has already registered.
-    ///
-    /// Note: The internal buffer must be at least 1 byte.
-    pub fn is_first_time_registration(&mut self) -> Result<bool> {
-        self.flash_storage
-            .read(
-                StorageContents::UserRegistered.get_address().0,
-                &mut self.internal_buffer,
-            )
-            .map_err(|_| error::Error::FlashReadError)?;
-
-        // 0xFF means uninitialized (first time), any other value means registered
-        Ok(self.internal_buffer[0] == 0xFF)
-    }
-
-    /// Marks the user as registered, completing the first-time setup.
-    ///
-    /// After calling this, `is_first_time_registration()` will return `false`.
-    pub fn mark_user_registered(&mut self) -> Result<()> {
-        self.write_byte(StorageContents::UserRegistered, 0, 0x01)
-    }
-
-    /// Clears the registration flag, resetting to first-time state.
-    ///
-    /// After calling this, `is_first_time_registration()` will return `true`.
-    /// Useful for factory reset or testing.
-    pub fn clear_user_registration(&mut self) -> Result<()> {
-        self.write_byte(StorageContents::UserRegistered, 0, 0xFF)
-    }
 }
