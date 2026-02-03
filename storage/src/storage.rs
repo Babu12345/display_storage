@@ -77,9 +77,10 @@ pub enum StorageContents {
     /// WiFi error flag - set when WiFi fails, cleared after displaying error on next boot
     #[addr_space(0x32d4a8, 0x32d4a8)]
     WifiErrorFlag,
-    /// Reserved Phy init (4KB)
-    #[addr_space(0x32d4a9, 0x32e4a8, reserved)]
-    ReservedPhyInit,
+    /// User registration flag - 0xFF = first time (unregistered), 0x01 = registered
+    /// Used to detect first-time setup and trigger onboarding flow
+    #[addr_space(0x32d4a9, 0x32d4a9)]
+    UserRegistered,
     /// Last few addresses are reserved for safety
     #[addr_space(0x7ffffe, 0x7fffff, reserved)]
     ReservedEnd,
@@ -163,5 +164,38 @@ where
             .read(content.get_address().0, &mut self.internal_buffer)
             .map_err(|_| error::Error::FlashReadError)?;
         Ok(self.internal_buffer)
+    }
+
+    /// Checks if this is the first time registration (user has never registered before).
+    ///
+    /// Returns `true` if the user has never registered (storage is uninitialized/0xFF),
+    /// `false` if the user has already registered.
+    ///
+    /// Note: The internal buffer must be at least 1 byte.
+    pub fn is_first_time_registration(&mut self) -> Result<bool> {
+        self.flash_storage
+            .read(
+                StorageContents::UserRegistered.get_address().0,
+                &mut self.internal_buffer,
+            )
+            .map_err(|_| error::Error::FlashReadError)?;
+
+        // 0xFF means uninitialized (first time), any other value means registered
+        Ok(self.internal_buffer[0] == 0xFF)
+    }
+
+    /// Marks the user as registered, completing the first-time setup.
+    ///
+    /// After calling this, `is_first_time_registration()` will return `false`.
+    pub fn mark_user_registered(&mut self) -> Result<()> {
+        self.write_byte(StorageContents::UserRegistered, 0, 0x01)
+    }
+
+    /// Clears the registration flag, resetting to first-time state.
+    ///
+    /// After calling this, `is_first_time_registration()` will return `true`.
+    /// Useful for factory reset or testing.
+    pub fn clear_user_registration(&mut self) -> Result<()> {
+        self.write_byte(StorageContents::UserRegistered, 0, 0xFF)
     }
 }
