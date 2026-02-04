@@ -53,33 +53,33 @@ pub enum StorageContents {
     /// Stores the last frame of the eink display
     #[addr_space(0x310002, 0x32c599)]
     Frame,
-    /// Storage wifi credential information
-    #[addr_space(0x32c59a, 0x32c699)]
+    /// Storage wifi credential information (512 bytes for MAX_NFCDATA_SIZE)
+    #[addr_space(0x32c59a, 0x32c799)]
     WifiCredentials,
-    /// Storage for textual display information
-    #[addr_space(0x32c69a, 0x32c799)]
+    /// Storage for textual display information (512 bytes for MAX_NFCDATA_SIZE)
+    #[addr_space(0x32c79a, 0x32c999)]
     DisplayText,
-    /// Storage for URL information
-    #[addr_space(0x32c79a, 0x32c899)]
+    /// Storage for URL information (512 bytes for MAX_NFCDATA_SIZE)
+    #[addr_space(0x32c99a, 0x32cb99)]
     DisplayURL,
     /// Storage for saved MQTT topics (up to 24 topics)
-    #[addr_space(0x32c89a, 0x32d499)]
+    #[addr_space(0x32cb9a, 0x32d799)]
     MqttTopics,
     /// Max cycles before display full refresh
-    #[addr_space(0x32d49a, 0x32d49b)]
+    #[addr_space(0x32d79a, 0x32d79b)]
     MaxCyclesBeforeFullRefresh,
     /// Minimum update interval between display refreshes
-    #[addr_space(0x32d49c, 0x32d49f)]
+    #[addr_space(0x32d79c, 0x32d79f)]
     MinUpdateInterval,
     /// Last successful update timestamp (seconds since boot, persists across reconnects)
-    #[addr_space(0x32d4a0, 0x32d4a7)]
+    #[addr_space(0x32d7a0, 0x32d7a7)]
     LastUpdateTimestamp,
     /// WiFi error flag - set when WiFi fails, cleared after displaying error on next boot
-    #[addr_space(0x32d4a8, 0x32d4a8)]
+    #[addr_space(0x32d7a8, 0x32d7a8)]
     WifiErrorFlag,
     /// User registration flag - 0xFF = first time (unregistered), 0x01 = registered
     /// Used to detect first-time setup and trigger onboarding flow
-    #[addr_space(0x32d4a9, 0x32d4a9)]
+    #[addr_space(0x32d7a9, 0x32d7a9)]
     UserRegistered,
     /// Last few addresses are reserved for safety
     #[addr_space(0x7ffffe, 0x7fffff, reserved)]
