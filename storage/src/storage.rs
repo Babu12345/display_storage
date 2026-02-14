@@ -81,6 +81,10 @@ pub enum StorageContents {
     /// Used to detect first-time setup and trigger onboarding flow
     #[addr_space(0x32d7a9, 0x32d7a9)]
     UserRegistered,
+    /// Display mode - 0x00 = LiveUpdates, 0x01 = CustomText, 0x02 = QRCode, 0xFF = unset (default to LiveUpdates)
+    /// Persists the current display mode across reboots
+    #[addr_space(0x32d7aa, 0x32d7aa)]
+    DisplayMode,
     /// Last few addresses are reserved for safety
     #[addr_space(0x7ffffe, 0x7fffff, reserved)]
     ReservedEnd,
